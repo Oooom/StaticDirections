@@ -1,11 +1,43 @@
 <html>
+    <head>
+        <title>Creator | Directions</title>
+        <style>
+            *{
+                margin: 0;
+                padding: 0;
+            }
 
-<head>
-    <title>Creator | Directions</title>
-</head>
+            html, body{
+                width: 100vw;
+                height: 100vh;    
+            }
 
-<body>
+            #mapDisplay{
+                width: 100vw;
+                height: 100vh;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id = "mapDisplay">
 
-</body>
+        </canvas>
 
+        <script src = "scripts/three.min.js"></script>
+        <script>
+            var canvas = document.getElementById("mapDisplay")
+            var renderer = new THREE.WebGLRenderer({antialias: true, canvas: canvas})
+            var scene = new THREE.Scene();
+            var camera = new THREE.PerspectiveCamera(45, canvas.innerWidth/canvas.innerHeight, 1, 1000);
+            scene.add(camera);
+
+            function animate(){
+                renderer.render(scene, camera)
+
+                requestAnimationFrame(animate)
+            }
+
+            animate()
+        </script>
+    </body>
 </html>
