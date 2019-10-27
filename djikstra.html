@@ -159,11 +159,11 @@
 
 			for(var vertex = 0; vertex < graph.length; vertex++){
 				if(!nodes[vertex].selected && 
-					graph[i][vertex].distance!=0 && 
-					(nodes[i].distance+graph[i][vertex].distance) < nodes[vertex].distance){
+					graph[minVertex][vertex].distance!=0 && 
+					(nodes[minVertex].distance+graph[minVertex][vertex].distance) < nodes[vertex].distance){
 
-					nodes[vertex].distance = nodes[i].distance+graph[i][vertex].distance;
-					nodes[vertex].parent = i;
+					nodes[vertex].distance = nodes[minVertex].distance+graph[minVertex][vertex].distance;
+					nodes[vertex].parent = minVertex;
 				}
 			}
 		}
