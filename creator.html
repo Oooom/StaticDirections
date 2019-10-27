@@ -1,66 +1,343 @@
 <html>
-    <head>
-        <title>Creator | Directions</title>
-        <style>
-            *{
-                margin: 0;
-                padding: 0;
-            }
 
-            html, body{
-                width: 100vw;
-                height: 100vh;    
-            }
+<head>
+    <title>Creator | Directions</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
 
-            #mapDisplay{
-                width: 100vw;
-                height: 100vh;
-            }
-        </style>
-    </head>
-    <body>
-        <canvas id = "mapDisplay">
+        html,
+        body {
+            width: 100vw;
+            height: 100vh;
+        }
 
-        </canvas>
+        #mapDisplay {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #reticle {
+            position: absolute;
+            left: 49.4vw;
+            top: 47.5vh;
+            z-index: 1;
+            color: white;
+            font-size: 2em;
+            font-family: serif;
+        }
+
+        #menu {
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            background-color: white;
+            box-shadow: 1px 1px 10px 1px gray;
+            width: 10vw;
+        }
+
+        #add_turn_btn{
+            display: none;
+        }
+    </style>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
+</head>
+
+<body>
+
+    <div id="reticle">
+        +
+    </div>
+
+    <div id="menu">
+        <center>
+            <button id="add_node_btn" class="btn btn-primary" style="margin-top: 5px;" data-toggle="modal"
+                data-target="#node_name_input_modal">Add Node</button>
+        </center>
+
+        <center>
+            <button id="add_route_btn" onclick="addRoute()" class="btn btn-primary" style="margin-top: 5px; margin-bottom: 5px">Add
+                Route</button>
+        </center>
+
+        <center>
+            <button id="add_turn_btn" onclick="addTurn()" class="btn btn-primary" style="margin-top: 5px; margin-bottom: 5px">Add Turn at
+                Reticle</button>
+        </center>
+
+        <center>
+            <button id="download_btn" onclick="downloadGraph()" class="btn btn-primary"
+                style="margin-top: 5px; margin-bottom: 5px">Download Graph</button>
+        </center>
+    </div>
+
+    <div class="modal fade" id="node_name_input_modal" role="dialog">
+        <div class="modal-dialog">
+
+            <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Add New Node</h4>
+                </div>
+                <div class="modal-body">
+                    <input type="text" id="node_name_input" placeholder="Node Name" />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal"
+                        onclick="addNode()">Add</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+
+    <canvas id="mapDisplay">
+
+    </canvas>
+
+    <script src="map_data_urls.js"></script>
+    <script src="scripts/three.min.js"></script>
+    <script src="scripts/OrbitControls.js"></script>
+    <script src="scripts/THREE.MeshLine.js"></script>
+    <script src="scripts/download.js"></script>
+    <script>
+        var graph = {
+            nodes: [], 
+            edges: []
+        }
+        var interim_path = {start: "", vertices: [], end:""}
+        var node_over_mouse = ""
+        var node_over_mouse_loc = {
+            x: 0,
+            y: 0
+        }
+
+        function downloadGraph(){
+            download(JSON.stringify(graph), "directions_graph.json", "application/json")
+        }
+
+        function addNode() {
+            graph.nodes.push({
+                label: document.getElementById("node_name_input").value,
+                coords:{
+                    x: controls.target.x,
+                    y: controls.target.y
+                }
+            })            
+
+            addCircle(document.getElementById("node_name_input").value)
+
+            document.getElementById("node_name_input").value = ""
+        }
+
+        function addRoute(){
+            window.addEventListener("click", startRoutePlacement)
+        }
+
+        function addTurn(){
+            interim_path.vertices.push({x: controls.target.x, y:controls.target.y})            
+
+            drawInterimLine()
+        }
+
+        function drawInterimLine(){
+            var route_geom = new THREE.Geometry()
+            route_geom.vertices.push(new THREE.Vector3(
+                                        interim_path.vertices[interim_path.vertices.length-1].x,
+                                        interim_path.vertices[interim_path.vertices.length-1].y,
+                                        0)
+                                    )
+            route_geom.vertices.push(new THREE.Vector3(
+                                        interim_path.vertices[interim_path.vertices.length-2].x,
+                                        interim_path.vertices[interim_path.vertices.length-2].y,
+                                        0)
+                                    )
+
+            var line = new MeshLine()
+            line.setGeometry(route_geom)
+
+            var line_mat = new MeshLineMaterial({color: 0x00FF00, lineWidth: 0.2})
+            var mesh = new THREE.Mesh(line.geometry, line_mat)
+            scene.add(mesh)
+        }
+
+        function startRoutePlacement(){
+            if(node_over_mouse != ""){
+                startNewRouteFrom(node_over_mouse)
+            }
+        }
         
-        <script src = "map_data_urls.js"></script>
-        <script src = "scripts/three.min.js"></script>
-        <script src = "scripts/OrbitControls.js"></script>
-        <script>
-            var canvas = document.getElementById("mapDisplay")
-            var renderer = new THREE.WebGLRenderer({antialias: true, canvas: canvas})
-            renderer.setSize(window.innerWidth, window.innerHeight)            
+        function endRoutePlacement(){
+            if(node_over_mouse != ""){
+                endNewRouteFrom(node_over_mouse)
+            }
+        }        
 
-            var scene = new THREE.Scene()
-            scene.background = new THREE.Color(0xffffff)
+        function startNewRouteFrom(node_over_mouse){
+            interim_path.start = node_over_mouse
+            interim_path.vertices.push({x: node_over_mouse_loc.x, y: node_over_mouse_loc.y})
 
-            var camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 1, 1000)            
-            camera.position.set(0, 0, 100)
-            scene.add(camera)
+            document.getElementById('add_node_btn').style.display = "none"
+            document.getElementById('add_route_btn').style.display = "none"
+            document.getElementById('add_turn_btn').style.display = "block"
 
-            var controls = new THREE.OrbitControls(camera, canvas)
-            controls.enableDamping = true
-            controls.dampingFactor = 0.05
-            controls.enableRotate = false
-            controls.screenSpacePanning = true
-            controls.panSpeed = 0.07
-            controls.maxDistance = 110
-            controls.minDistance = 10
+            window.removeEventListener("click", startRoutePlacement)
+            window.addEventListener("click", endRoutePlacement)
+        }        
 
-            var plane_geom = new THREE.PlaneGeometry(100, 70, 2, 2)
-            var plane_mat = new THREE.MeshBasicMaterial( {color: 0xffff00, side: THREE.DoubleSide} )
-            var plane = new THREE.Mesh( plane_geom, plane_mat )
-            scene.add( plane )
+        function endNewRouteFrom(node_over_mouse){
+            interim_path.end = node_over_mouse
+            interim_path.vertices.push({x: node_over_mouse_loc.x, y: node_over_mouse_loc.y})
 
-            function animate(){
-                requestAnimationFrame(animate)                               
+            graph.edges.push({
+                start: interim_path.start, vertices: JSON.parse( JSON.stringify(interim_path.vertices) ), end: interim_path.end
+            })
 
-                controls.update()
+            drawInterimLine()
 
-                renderer.render(scene, camera)
+            interim_path.vertices.splice(0, interim_path.vertices.length)
+
+            document.getElementById('add_node_btn').style.display = "block"
+            document.getElementById('add_route_btn').style.display = "block"
+            document.getElementById('add_turn_btn').style.display = "none"
+
+            window.removeEventListener("click", endRoutePlacement)
+        }
+    </script>
+    <script>
+        var map_texture = new THREE.TextureLoader().load(map_crop)
+        var satellite_texture = new THREE.TextureLoader().load(satellite_crop)
+
+        var canvas = document.getElementById("mapDisplay")
+        var renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            canvas: canvas
+        })
+        renderer.setSize(window.innerWidth, window.innerHeight)
+
+        var scene = new THREE.Scene()
+        scene.background = new THREE.Color(0xffffff)
+
+
+
+        var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000)
+        camera.position.set(0, 0, 100)
+        scene.add(camera)
+
+        var raycaster = new THREE.Raycaster();
+        var mouse = new THREE.Vector2();
+
+        var controls = new THREE.OrbitControls(camera, canvas)
+        controls.enableDamping = true
+        controls.dampingFactor = 0.07
+        controls.enableRotate = false
+        controls.screenSpacePanning = true
+        controls.panSpeed = 0.07
+        controls.maxDistance = 110
+        controls.minDistance = 50
+
+        var plane1_geom = new THREE.PlaneGeometry(100, 60, 1, 1)
+        var plane1_mat = new THREE.MeshBasicMaterial({
+            map: satellite_texture,
+            side: THREE.DoubleSide
+        })
+        var plane1 = new THREE.Mesh(plane1_geom, plane1_mat)
+        scene.add(plane1)
+        plane1.visible = true
+
+        var plane2_geom = new THREE.PlaneGeometry(100, 60, 1, 1)
+        var plane2_mat = new THREE.MeshBasicMaterial({
+            map: map_texture,
+            side: THREE.DoubleSide
+        })
+        var plane2 = new THREE.Mesh(plane2_geom, plane2_mat)
+        scene.add(plane2)
+        plane2.visible = false
+
+
+        //factory methods use these globals
+        var circle_geom = new THREE.CircleBufferGeometry(0.3, 32)
+        var circle_mat = new THREE.MeshBasicMaterial({
+            color: 0xFF0000,
+            side: THREE.DoubleSide
+        })                
+
+        function animate() {
+            requestAnimationFrame(animate)
+
+            controls.update()
+
+            // update the picking ray with the camera and mouse position
+            raycaster.setFromCamera(mouse, camera);
+            // calculate objects intersecting the picking ray
+            var intersects = raycaster.intersectObjects(scene.children);
+            if(intersects.length == 0){
+                canvas.title = ""
+            }else{
+                if(intersects[0].object.userData.label !== undefined){
+                    canvas.title = intersects[0].object.userData.label
+                    node_over_mouse_loc.x = intersects[0].point.x
+                    node_over_mouse_loc.y = intersects[0].point.y
+                }else{
+                    canvas.title = ""
+                }
+
+                node_over_mouse = canvas.title                
             }
 
-            animate()
-        </script>
-    </body>
+            renderer.render(scene, camera)
+        }
+
+        animate()
+
+        function addCircle(name) {
+            var node = new THREE.Mesh(circle_geom, circle_mat)
+            node.position.set(controls.target.x, controls.target.y, 0.1)
+            node.userData = {
+                label: name
+            }
+            scene.add(node)
+        }
+
+        window.addEventListener("keypress", function (e) {
+            if (e.key == "N") {
+                plane1.visible = !plane1.visible
+                plane2.visible = !plane2.visible
+            }
+
+            if (plane2.visible) {
+                document.getElementById("reticle").style.color = "black"
+            } else {
+                document.getElementById("reticle").style.color = "white"
+            }
+        })
+
+        $(document).ready(function () {
+            $('[data-toggle="popover"]').popover()
+        })
+
+
+
+        
+
+        function onMouseMove(event) {
+            // calculate mouse position in normalized device coordinates
+            // (-1 to +1) for both components
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        }
+        window.addEventListener('mousemove', onMouseMove, false);
+    </script>
+</body>
+
 </html>
