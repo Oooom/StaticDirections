@@ -41,6 +41,14 @@
         #add_turn_btn{
             display: none;
         }
+
+        #notif{
+        	position: fixed;
+        	top: 10px;
+        	left:20vw;
+        	color: red;
+        	font-size: large;
+        }
     </style>
 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
@@ -57,7 +65,7 @@
     <div id="menu">
         <center>
             <button id="add_node_btn" class="btn btn-primary" style="margin-top: 5px;" data-toggle="modal"
-                data-target="#node_name_input_modal">Add Node</button>
+                data-target="#node_name_input_modal" data-toggle="tooltip"  title="The reticle should be on the desired node location">Add Node</button>
         </center>
 
         <center>
@@ -98,7 +106,7 @@
         </div>
     </div>
 
-
+    <div id="notif"></div>
 
     <canvas id="mapDisplay">
 
@@ -127,6 +135,7 @@
         }
 
         function addNode() {
+        	document.getElementById("notif").innerText = ""
             graph.nodes.push({
                 label: document.getElementById("node_name_input").value,
                 coords:{
@@ -148,6 +157,7 @@
             var expense = parseInt(prompt("Expense: "))
             interim_path.expense = expense
 
+            document.getElementById("notif").innerText = "Select a starting point"
             window.addEventListener("click", startRoutePlacement)
         }
 
@@ -180,6 +190,7 @@
 
         function startRoutePlacement(){
             if(node_over_mouse != ""){
+            	document.getElementById("notif").innerText = ""
                 startNewRouteFrom(node_over_mouse)
             }
         }
