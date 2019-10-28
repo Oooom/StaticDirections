@@ -1,8 +1,467 @@
 <html>
-    <head>
-        <title>User | Directions</title>
-    </head>
-    <body>
-        
-    </body>
+
+<head>
+    <title>User | Directions</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #mapDisplay {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #menu {
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            background-color: white;
+            box-shadow: 1px 1px 10px 1px gray;
+            padding: 5px;
+        }
+
+        #upload_button {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+        }
+
+        #menu>input {
+            float: right;
+            margin-left: 5px;
+            border: none;
+        }
+    </style>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
+</head>
+
+<body>
+    <input type="file" id="upload_button" class="btn btn-primary" title="Upload Graph">
+
+    <div id="menu">
+        <label>From</label> <input type="text" disabled id="from" placeholder="   click on a red icon" />
+        <br>
+
+        <label>To</label> <input type="text" disabled id="to" placeholder="   click on a red icon" />
+        <br>
+
+        <label>Preferences</label>
+        <br>
+        <label>Distance</label> <input type="radio" id="distance" name="pref" />
+        <br>
+        <label>Time</label> <input type="radio" id="time" name="pref" />
+        <br>
+        <label>Expense</label> <input type="radio" id="expense" name="pref" />
+        <br>
+        <center>
+            <button id="find_path_btn" onclick="findPreferredPath()" class="btn btn-primary"
+                style="margin-top: 5px; margin-bottom: 5px;">Find
+                Path</button>
+        </center>
+    </div>
+
+    <canvas id="mapDisplay">
+
+    </canvas>
+
+    <script src="map_data_urls.js"></script>
+    <script src="scripts/three.min.js"></script>
+    <script src="scripts/OrbitControls.js"></script>
+    <script src="scripts/THREE.MeshLine.js"></script>
+    <script src="scripts/download.js"></script>
+    <script>
+        var graph = {
+            nodes: [],
+            edges: []
+        }
+        var model_graph = []
+
+
+        var node_over_mouse = ""
+        var node_over_mouse_loc = {
+            x: 0,
+            y: 0
+        }
+
+        var routeInputs = [
+            document.getElementById("from"),
+            document.getElementById("to")
+        ]
+        var current_selected = 0
+        routeInputs[current_selected].style.border = "1px solid blue"
+
+        function renderGraph() {
+            var label_coords_map = {}
+
+            for (var i = 0; i < graph.nodes.length; i++) {
+                var red_circle = new THREE.Mesh(circle_geom, circle_mat)
+                red_circle.userData.label = graph.nodes[i].label
+                red_circle.position.set(graph.nodes[i].coords.x, graph.nodes[i].coords.y, 0.15)
+
+                label_coords_map[graph.nodes[i].label] = graph.nodes[i].coords
+
+                scene.add(red_circle)
+            }
+
+            for (var i = 0; i < graph.edges.length; i++) {
+                graph.edges[i].vertices[0] = label_coords_map[graph.edges[i].start]
+                graph.edges[i].vertices[graph.edges[i].vertices.length - 1] = label_coords_map[graph.edges[i].end]
+
+                for (var j = 1; j < graph.edges[i].vertices.length; j++) {
+                    var line_mesh = drawLine(
+                        new THREE.Vector3(graph.edges[i].vertices[j - 1].x, graph.edges[i].vertices[j - 1].y, 0.1),
+                        new THREE.Vector3(graph.edges[i].vertices[j].x, graph.edges[i].vertices[j].y, 0.1)
+                    )
+
+                    line_mesh.userData.start = graph.edges[i].start
+                    line_mesh.userData.end = graph.edges[i].end
+                }
+            }
+        }
+
+        function findEdge(start, end) {
+            var edge = graph.edges.find(function (obj) {
+                return (obj.start == start && obj.end == end) || (obj.start == end && obj.end == start)
+            })
+
+            if (edge) {
+                return {
+                    "distance": edge.distance,
+                    "expense": edge.expense,
+                    "time": edge.time
+                }
+            } else {
+                return {
+                    "distance": 0,
+                    "expense": 0,
+                    "time": 0
+                }
+            }
+        }
+
+        function createMatrixFromAdjacencyList() {
+            for (var i = 0; i < graph.nodes.length; i++) {
+                model_graph[i] = []
+                for (var j = 0; j < graph.nodes.length; j++) {
+                    if (i == j) {
+                        model_graph[i][j] = {
+                            "distance": 0,
+                            "cost": 0,
+                            "time": 0
+                        }
+                    } else {
+                        model_graph[i][j] = findEdge(graph.nodes[i].label, graph.nodes[j].label)
+                    }
+                }
+            }
+        }
+
+        function drawLine(vec1, vec2) {
+            var route_geom = new THREE.Geometry()
+            route_geom.vertices.push(vec1)
+            route_geom.vertices.push(vec2)
+
+            var line = new MeshLine()
+            line.setGeometry(route_geom)
+
+            var line_mat = new MeshLineMaterial({
+                color: 0x00FF00,
+                lineWidth: 0.2
+            })
+            var mesh = new THREE.Mesh(line.geometry, line_mat)
+            scene.add(mesh)
+
+            return mesh
+        }
+
+        window.addEventListener("click", startRouteInput)
+
+        function startRouteInput() {
+            if (node_over_mouse != "") {
+                routeTrigger(node_over_mouse)
+            }
+        }
+
+        function routeTrigger(route_name) {
+            routeInputs[current_selected].value = route_name
+            routeInputs[current_selected].style.border = "none"
+
+            current_selected = (current_selected + 1) % 2
+            routeInputs[current_selected].style.border = "1px solid blue"
+        }
+
+        function getLabelIndex(label) {
+            for (var i = 0; i < graph.nodes.length; i++) {
+                if (label == graph.nodes[i].label) {
+                    return i
+                }
+            }
+        }
+
+        function getIndexLabel(index) {
+            return graph.nodes[index].label
+        }
+
+        var previous_render_path = null
+
+        function renderPath(render_list){
+            if(previous_render_path){
+                colorEdge(previous_render_path, 0x00FF00)
+            }
+
+            colorEdge(render_list, 0x0000FF)
+            previous_render_path = render_list
+        }
+
+        function colorEdge(list, color){
+            for(var i = 1; i < list.length; i++){
+                var lines = getRoutesMesh(list[i-1], list[i])
+
+                for(var line of lines){
+                    line.material.color.setHex(color)
+
+                    if(color == 0x00FF00){  //the normal color
+                        line.position.z = 0.1
+                    }else{ //highlighted
+                        line.position.z = 0.12
+                    }
+                }
+            }
+        }
+
+        function getRoutesMesh(start, end){
+            var all_routes = []
+            
+            for(var i = 0; i < scene.children.length; i++){
+                if(
+                    (scene.children[i].userData.start == start && scene.children[i].userData.end == end) ||
+                    (scene.children[i].userData.start == end && scene.children[i].userData.end == start)
+                ){
+                    all_routes.push(scene.children[i])
+                }
+            }
+
+            return all_routes
+        }
+    </script>
+
+    <!-- Related to Dijkstras' -->
+    <script>
+        function findPreferredPath() {
+            var from_label = document.getElementById("from").value
+            var to_label = document.getElementById("to").value
+
+            var source = getLabelIndex(from_label)
+            var destination = getLabelIndex(to_label)
+
+            var path = dijsktra(model_graph, source, destination)
+            path = path.reverse()
+
+            var to_render_list = []
+
+            for(var obj of path){
+                to_render_list.push( getIndexLabel(obj.id) )
+            }
+
+            renderPath(to_render_list)
+        }
+
+        function dijsktra(graph, source, destination) {
+            var nodes = []
+            for (var i = 0; i < graph.length; i++) {
+                nodes[i] = {}
+                nodes[i].id = i;
+                nodes[i].distance = Number.MAX_VALUE;
+                nodes[i].parent = -1;
+                nodes[i].selected = false;
+            }
+            nodes[source].distance = 0;
+            for (var i = 0; i < graph.length - 1; i++) {
+                var minVertex = minDistance(nodes)
+                nodes[minVertex].selected = true;
+                for (var vertex = 0; vertex <
+                    graph.length; vertex++) {
+                    if (!nodes[vertex].selected && graph[minVertex][vertex].distance != 0 &&
+                        (nodes[minVertex].distance + graph[minVertex][vertex].distance) < nodes[vertex].distance) {
+                        nodes[vertex].distance = nodes[minVertex].distance + graph[minVertex][vertex].distance;
+                        nodes[vertex].parent = minVertex;
+                    }
+                }
+            }
+            return findPath(nodes, destination, source);
+        }
+
+        function findPath(nodes, destination, source) {
+            var path = []
+            var index = destination;
+            while (index != source) {
+                path.push(nodes[index]);
+                index = nodes[index].parent;
+            }
+            path.push(nodes[index])
+
+            return path;
+        }
+
+        function minDistance(nodes) {
+            var min = Number.MAX_VALUE,
+                minIndex;
+            for (var vertex = 0; vertex < nodes.length; vertex++) {
+                if (nodes[vertex].selected == false && nodes[vertex].distance <= min) {
+                    min = nodes[vertex].distance;
+                    minIndex = vertex;
+                }
+            }
+            return minIndex;
+        }
+    </script>
+
+    <script>
+        var map_texture = new THREE.TextureLoader().load(map_crop)
+        var satellite_texture = new THREE.TextureLoader().load(satellite_crop)
+
+        var canvas = document.getElementById("mapDisplay")
+        var renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            canvas: canvas
+        })
+        renderer.setSize(window.innerWidth, window.innerHeight)
+
+        var scene = new THREE.Scene()
+        scene.background = new THREE.Color(0xffffff)
+
+
+
+        var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000)
+        camera.position.set(0, 0, 100)
+        scene.add(camera)
+
+        var raycaster = new THREE.Raycaster();
+        var mouse = new THREE.Vector2();
+
+        var controls = new THREE.OrbitControls(camera, canvas)
+        controls.enableDamping = true
+        controls.dampingFactor = 0.07
+        controls.enableRotate = false
+        controls.screenSpacePanning = true
+        controls.panSpeed = 0.07
+        controls.maxDistance = 110
+        controls.minDistance = 50
+
+        var plane1_geom = new THREE.PlaneGeometry(100, 60, 1, 1)
+        var plane1_mat = new THREE.MeshBasicMaterial({
+            map: satellite_texture,
+            side: THREE.DoubleSide
+        })
+        var plane1 = new THREE.Mesh(plane1_geom, plane1_mat)
+        scene.add(plane1)
+        plane1.visible = true
+
+        var plane2_geom = new THREE.PlaneGeometry(100, 60, 1, 1)
+        var plane2_mat = new THREE.MeshBasicMaterial({
+            map: map_texture,
+            side: THREE.DoubleSide
+        })
+        var plane2 = new THREE.Mesh(plane2_geom, plane2_mat)
+        scene.add(plane2)
+        plane2.visible = false
+
+
+        //factory methods use these globals
+        var circle_geom = new THREE.CircleBufferGeometry(0.3, 32)
+        var circle_mat = new THREE.MeshBasicMaterial({
+            color: 0xFF0000,
+            side: THREE.DoubleSide
+        })
+
+        function animate() {
+            requestAnimationFrame(animate)
+
+            controls.update()
+
+            // update the picking ray with the camera and mouse position
+            raycaster.setFromCamera(mouse, camera);
+            // calculate objects intersecting the picking ray
+            var intersects = raycaster.intersectObjects(scene.children);
+            if (intersects.length == 0) {
+                canvas.title = ""
+            } else {
+                if (intersects[0].object.userData.label !== undefined) {
+                    canvas.title = intersects[0].object.userData.label
+                    node_over_mouse_loc.x = intersects[0].point.x
+                    node_over_mouse_loc.y = intersects[0].point.y
+                } else {
+                    canvas.title = ""
+                }
+
+                node_over_mouse = canvas.title
+            }
+
+            renderer.render(scene, camera)
+        }
+
+        animate()
+
+        window.addEventListener("keypress", function (e) {
+            if (e.key == "N") {
+                plane1.visible = !plane1.visible
+                plane2.visible = !plane2.visible
+            }
+        })
+
+
+        function onMouseMove(event) {
+            // calculate mouse position in normalized device coordinates
+            // (-1 to +1) for both components
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        }
+        window.addEventListener('mousemove', onMouseMove, false);
+
+
+        document.getElementById('upload_button').addEventListener('change', getFile)
+
+        function getFile(event) {
+            const input = event.target
+            if ('files' in input && input.files.length > 0) {
+                placeFileContent(
+                    document.getElementById('content-target'),
+                    input.files[0])
+            }
+        }
+
+        function placeFileContent(target, file) {
+            readFileContent(file).then(content => {
+
+                graph = JSON.parse(content)
+
+                renderGraph()
+                createMatrixFromAdjacencyList()
+
+            }).catch(error => console.log(error))
+        }
+
+        function readFileContent(file) {
+            const reader = new FileReader()
+            return new Promise((resolve, reject) => {
+                reader.onload = event => resolve(event.target.result)
+                reader.onerror = error => reject(error)
+                reader.readAsText(file)
+            })
+        }
+    </script>
+</body>
+
 </html>

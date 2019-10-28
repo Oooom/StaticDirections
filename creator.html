@@ -113,8 +113,9 @@
         var graph = {
             nodes: [], 
             edges: []
-        }
-        var interim_path = {start: "", vertices: [], end:""}
+        }        
+
+        var interim_path = {start: "", cost: 0, vertices: [], end:""}
         var node_over_mouse = ""
         var node_over_mouse_loc = {
             x: 0,
@@ -140,6 +141,13 @@
         }
 
         function addRoute(){
+            var distance = parseInt(prompt("Distance: "))
+            interim_path.distance = distance
+            var time = parseInt(prompt("Time: "))
+            interim_path.time = time
+            var expense = parseInt(prompt("Expense: "))
+            interim_path.expense = expense
+
             window.addEventListener("click", startRoutePlacement)
         }
 
@@ -199,7 +207,12 @@
             interim_path.vertices.push({x: node_over_mouse_loc.x, y: node_over_mouse_loc.y})
 
             graph.edges.push({
-                start: interim_path.start, vertices: JSON.parse( JSON.stringify(interim_path.vertices) ), end: interim_path.end
+                start: interim_path.start,
+                vertices: JSON.parse( JSON.stringify(interim_path.vertices) ),
+                end: interim_path.end,
+                distance: interim_path.distance,
+                time: interim_path.time,
+                expense: interim_path.expense
             })
 
             drawInterimLine()
