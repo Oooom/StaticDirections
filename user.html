@@ -97,6 +97,49 @@
 <script src="scripts/THREE.MeshLine.js"></script>
 <script src="scripts/download.js"></script>
 <script>
+	var HashTable = function(limit=8) {
+			this._limit = limit;
+			this._storage = [];
+			this._count = 0;
+		}
+		String.prototype.hashCode = function(max){
+			var hash = 0;
+			if (!this.length) return hash;
+			for (i = 0; i < this.length; i++) {
+				char = this.charCodeAt(i);
+				hash = ((hash<<5)-hash)+char;
+    			hash = hash & hash; // Convert to 32bit integer
+    		}
+    		return Math.abs(max?hash%max:hash);
+    	};
+    	HashTable.prototype.add = function(key, value) {
+    		var index = key.hashCode();
+    		var tuple = [key, value];
+    		var bucket = this._storage[index];
+    		if (bucket) { 
+    			for (var i = 0; i < bucket.length; i++) {  
+    				if (bucket[i][0] === key) {
+    					bucket[i][1] = value;
+    				} else {
+    					bucket.push(tuple);
+    				}
+    			} 
+    		} else {
+    			this._storage[index]=[tuple];
+    		} 
+    	};
+    	HashTable.prototype.retrieve = function(key) {
+    		var index = key.hashCode();
+    		var bucket = this._storage[index];
+    		for (var i = 0; i < bucket.length; i++) {
+    			if (bucket[i][0] === key) {
+    				return bucket[i][1];
+    			}   
+    		}
+    	};
+
+    	var hashTable = new HashTable();
+    	
 	var graph = {
 		nodes: [],
 		edges: []
@@ -240,11 +283,7 @@
 	}
 
 	function getLabelIndex(label) {
-		for (var i = 0; i < graph.nodes.length; i++) {
-			if (label == graph.nodes[i].label) {
-				return i
-			}
-		}
+		return hashTable.retrieve(label)
 	}
 
 	function getIndexLabel(index) {
@@ -516,7 +555,9 @@ function minDistance(nodes, factor) {
         	readFileContent(file).then(content => {
 
         		graph = JSON.parse(content)
-
+        		for(var i=0; i<graph.nodes.length; i++){
+        			hashTable.add(graph.nodes[i].label, i)
+        		}
         		renderGraph()
         		createMatrixFromAdjacencyList()
 
