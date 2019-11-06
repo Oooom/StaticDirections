@@ -56,7 +56,7 @@
 
 		<label>To</label> <input type="text" disabled id="to" placeholder="   click on a red icon" />
 		<br>
-			<label>Preferences</label>
+			<label>Preferences: </label>
 			<br>
 			<label>Distance</label> <input type="radio" id="distance" name="pref" value="distance"/>
 			<br>
@@ -138,12 +138,14 @@
 		if (edge) {
 			return {
 				"distance": edge.distance,
+				"mode": edge.mode,
 				"expense": edge.expense,
 				"time": edge.time
 			}
 		} else {
 			return {
 				"distance": 0,
+				"mode": null,
 				"expense": 0,
 				"time": 0
 			}
@@ -158,7 +160,8 @@
 					model_graph[i][j] = {
 						"distance": 0,
 						"cost": 0,
-						"time": 0
+						"time": 0,
+						"mode": null
 					}
 				} else {
 					model_graph[i][j] = findEdge(graph.nodes[i].label, graph.nodes[j].label)
@@ -266,6 +269,7 @@
 		var destination = getLabelIndex(to_label)
 
 		var path = dijsktra(model_graph, source, destination, factor)
+		var totalCost = path.pop()
 		path = path.reverse()
 
 		var to_render_list = []
@@ -305,12 +309,15 @@
 function findPath(nodes, destination, source) {
 	var path = []
 	var index = destination;
+	var factorCost = 0;
 	while (index != source) {
+		factorCost += nodes[index].factor
 		path.push(nodes[index]);
 		index = nodes[index].parent;
 	}
 	path.push(nodes[index])
-
+	path.push(factorCost);
+	console.log(factorCost);
 	return path;
 }
 

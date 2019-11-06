@@ -51,9 +51,19 @@
         }
     </style>
 
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
+    <script>
+        $(document).ready(function(){
+            $('#node_name_input_modal').on('shown.bs.modal', function () {
+              $('#node_name_input').trigger('focus')
+            })
+        })
+
+    </script>
 </head>
 
 <body>
@@ -65,22 +75,22 @@
     <div id="menu">
         <center>
             <button id="add_node_btn" class="btn btn-primary" style="margin-top: 5px;" data-toggle="modal"
-                data-target="#node_name_input_modal" data-toggle="tooltip"  title="The reticle should be on the desired node location">Add Node</button>
+            data-target="#node_name_input_modal" data-toggle="tooltip"  title="The reticle should be on the desired node location">Add Node</button>
         </center>
 
         <center>
             <button id="add_route_btn" onclick="addRoute()" class="btn btn-primary" style="margin-top: 5px; margin-bottom: 5px">Add
-                Route</button>
+            Route</button>
         </center>
 
         <center>
             <button id="add_turn_btn" onclick="addTurn()" class="btn btn-primary" style="margin-top: 5px; margin-bottom: 5px">Add Turn at
-                Reticle</button>
+            Reticle</button>
         </center>
 
         <center>
             <button id="download_btn" onclick="downloadGraph()" class="btn btn-primary"
-                style="margin-top: 5px; margin-bottom: 5px">Download Graph</button>
+            style="margin-top: 5px; margin-bottom: 5px">Download Graph</button>
         </center>
     </div>
 
@@ -90,15 +100,15 @@
             <!-- Modal content-->
             <div class="modal-content">
                 <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
                     <h4 class="modal-title">Add New Node</h4>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
                 </div>
                 <div class="modal-body">
                     <input type="text" id="node_name_input" placeholder="Node Name" />
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal"
-                        onclick="addNode()">Add</button>
+                    <button type="button" class="btn btn-info" data-dismiss="modal"
+                    onclick="addNode()">Add</button>
                     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
                 </div>
             </div>
@@ -112,180 +122,229 @@
 
     </canvas>
 
-    <script src="map_data_urls.js"></script>
-    <script src="scripts/three.min.js"></script>
-    <script src="scripts/OrbitControls.js"></script>
-    <script src="scripts/THREE.MeshLine.js"></script>
-    <script src="scripts/download.js"></script>
-    <script>
-        var graph = {
-            nodes: [], 
-            edges: []
-        }        
+    <button style="display: none" type="button" id="promptButton" class="btn btn-primary" data-toggle="modal" data-target="#prompt">
+      Launch demo modal
+    </button>
 
-        var interim_path = {start: "", cost: 0, vertices: [], end:""}
-        var node_over_mouse = ""
-        var node_over_mouse_loc = {
-            x: 0,
-            y: 0
+    <!-- Modal -->
+    <div class="modal fade" id="prompt" tabindex="-1" role="dialog" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="label">Select the mode of transport</h5>
+          </div>
+          <div class="modal-body">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="mode" id="roadway" value="roadway" checked>
+              <label class="form-check-label" for="roadway">
+                Roadway
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="mode" id="metro" value="metro">
+              <label class="form-check-label" for="metro">
+                Metro
+              </label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" data-dismiss="modal">Submit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<script src="map_data_urls.js"></script>
+<script src="scripts/three.min.js"></script>
+<script src="scripts/OrbitControls.js"></script>
+<script src="scripts/THREE.MeshLine.js"></script>
+<script src="scripts/download.js"></script>
+<script>
+
+    var ROAD_SPEED = 60     //assuming the average speed of the car to be 60km/hr
+    var METRO_SPEED = 50    //assuming the average speed of the metro to be 50km/hr
+    var ROAD_COST = 9.87
+    var METRO_COST = 10
+
+    var graph = {
+        nodes: [], 
+        edges: []
+    }        
+
+    var interim_path = {start: "", cost: 0, vertices: [], end:""}
+    var node_over_mouse = ""
+    var node_over_mouse_loc = {
+        x: 0,
+        y: 0
+    }
+
+    function downloadGraph(){
+        download(JSON.stringify(graph), "directions_graph.json", "application/json")
+    }
+
+    function addNode() {
+       document.getElementById("notif").innerText = ""
+       graph.nodes.push({
+        label: document.getElementById("node_name_input").value,
+        coords:{
+            x: controls.target.x,
+            y: controls.target.y
         }
+    })            
 
-        function downloadGraph(){
-            download(JSON.stringify(graph), "directions_graph.json", "application/json")
-        }
+       addCircle(document.getElementById("node_name_input").value)
 
-        function addNode() {
-        	document.getElementById("notif").innerText = ""
-            graph.nodes.push({
-                label: document.getElementById("node_name_input").value,
-                coords:{
-                    x: controls.target.x,
-                    y: controls.target.y
-                }
-            })            
+       document.getElementById("node_name_input").value = ""
+   }
 
-            addCircle(document.getElementById("node_name_input").value)
+   function addRoute(){
+    var distance = parseInt(prompt("Distance: "))
+    interim_path.distance = distance
 
-            document.getElementById("node_name_input").value = ""
-        }
+    document.getElementById("promptButton").click()
+    var mode = document.getElementById("metro").checked
+    if(mode)    {
+        mode = document.getElementById("metro").value
+        interim_path.cost = METRO_COST;
+        interim_path.time = distance/METRO_SPEED;
+    }
+    else{
+        mode = document.getElementById("roadway").value
+        interim_path.cost = ROAD_COST*distance;
+        interim_path.time = distance/ROAD_SPEED;   
+    }    
+    interim_path.mode = mode
 
-        function addRoute(){
-            var distance = parseInt(prompt("Distance: "))
-            interim_path.distance = distance
-            var time = parseInt(prompt("Time: "))
-            interim_path.time = time
-            var expense = parseInt(prompt("Expense: "))
-            interim_path.expense = expense
+    document.getElementById("notif").innerText = "Select a starting point"
+    window.addEventListener("click", startRoutePlacement)
+}
 
-            document.getElementById("notif").innerText = "Select a starting point"
-            window.addEventListener("click", startRoutePlacement)
-        }
+function addTurn(){
+    interim_path.vertices.push({x: controls.target.x, y:controls.target.y})            
 
-        function addTurn(){
-            interim_path.vertices.push({x: controls.target.x, y:controls.target.y})            
+    drawInterimLine()
+}
 
-            drawInterimLine()
-        }
+function drawInterimLine(){
+    var route_geom = new THREE.Geometry()
+    route_geom.vertices.push(new THREE.Vector3(
+        interim_path.vertices[interim_path.vertices.length-1].x,
+        interim_path.vertices[interim_path.vertices.length-1].y,
+        0)
+    )
+    route_geom.vertices.push(new THREE.Vector3(
+        interim_path.vertices[interim_path.vertices.length-2].x,
+        interim_path.vertices[interim_path.vertices.length-2].y,
+        0)
+    )
 
-        function drawInterimLine(){
-            var route_geom = new THREE.Geometry()
-            route_geom.vertices.push(new THREE.Vector3(
-                                        interim_path.vertices[interim_path.vertices.length-1].x,
-                                        interim_path.vertices[interim_path.vertices.length-1].y,
-                                        0)
-                                    )
-            route_geom.vertices.push(new THREE.Vector3(
-                                        interim_path.vertices[interim_path.vertices.length-2].x,
-                                        interim_path.vertices[interim_path.vertices.length-2].y,
-                                        0)
-                                    )
+    var line = new MeshLine()
+    line.setGeometry(route_geom)
 
-            var line = new MeshLine()
-            line.setGeometry(route_geom)
+    var line_mat = new MeshLineMaterial({color: 0x00FF00, lineWidth: 0.2})
+    var mesh = new THREE.Mesh(line.geometry, line_mat)
+    scene.add(mesh)
+}
 
-            var line_mat = new MeshLineMaterial({color: 0x00FF00, lineWidth: 0.2})
-            var mesh = new THREE.Mesh(line.geometry, line_mat)
-            scene.add(mesh)
-        }
+function startRoutePlacement(){
+    if(node_over_mouse != ""){
+       document.getElementById("notif").innerText = ""
+       startNewRouteFrom(node_over_mouse)
+   }
+}
 
-        function startRoutePlacement(){
-            if(node_over_mouse != ""){
-            	document.getElementById("notif").innerText = ""
-                startNewRouteFrom(node_over_mouse)
-            }
-        }
-        
-        function endRoutePlacement(){
-            if(node_over_mouse != ""){
-                endNewRouteFrom(node_over_mouse)
-            }
-        }        
+function endRoutePlacement(){
+    if(node_over_mouse != ""){
+        endNewRouteFrom(node_over_mouse)
+    }
+}        
 
-        function startNewRouteFrom(node_over_mouse){
-            interim_path.start = node_over_mouse
-            interim_path.vertices.push({x: node_over_mouse_loc.x, y: node_over_mouse_loc.y})
+function startNewRouteFrom(node_over_mouse){
+    interim_path.start = node_over_mouse
+    interim_path.vertices.push({x: node_over_mouse_loc.x, y: node_over_mouse_loc.y})
 
-            document.getElementById('add_node_btn').style.display = "none"
-            document.getElementById('add_route_btn').style.display = "none"
-            document.getElementById('add_turn_btn').style.display = "block"
+    document.getElementById('add_node_btn').style.display = "none"
+    document.getElementById('add_route_btn').style.display = "none"
+    document.getElementById('add_turn_btn').style.display = "block"
 
-            window.removeEventListener("click", startRoutePlacement)
-            window.addEventListener("click", endRoutePlacement)
-        }        
+    window.removeEventListener("click", startRoutePlacement)
+    window.addEventListener("click", endRoutePlacement)
+}        
 
-        function endNewRouteFrom(node_over_mouse){
-            interim_path.end = node_over_mouse
-            interim_path.vertices.push({x: node_over_mouse_loc.x, y: node_over_mouse_loc.y})
+function endNewRouteFrom(node_over_mouse){
+    interim_path.end = node_over_mouse
+    interim_path.vertices.push({x: node_over_mouse_loc.x, y: node_over_mouse_loc.y})
 
-            graph.edges.push({
-                start: interim_path.start,
-                vertices: JSON.parse( JSON.stringify(interim_path.vertices) ),
-                end: interim_path.end,
-                distance: interim_path.distance,
-                time: interim_path.time,
-                expense: interim_path.expense
-            })
+    graph.edges.push({
+        start: interim_path.start,
+        vertices: JSON.parse( JSON.stringify(interim_path.vertices) ),
+        end: interim_path.end,
+        distance: interim_path.distance,
+        expense: interim_path.cost,
+        time: interim_path.time,
+        mode: interim_path.mode
+    })
 
-            drawInterimLine()
+    drawInterimLine()
 
-            interim_path.vertices.splice(0, interim_path.vertices.length)
+    interim_path.vertices.splice(0, interim_path.vertices.length)
 
-            document.getElementById('add_node_btn').style.display = "block"
-            document.getElementById('add_route_btn').style.display = "block"
-            document.getElementById('add_turn_btn').style.display = "none"
+    document.getElementById('add_node_btn').style.display = "block"
+    document.getElementById('add_route_btn').style.display = "block"
+    document.getElementById('add_turn_btn').style.display = "none"
 
-            window.removeEventListener("click", endRoutePlacement)
-        }
-    </script>
-    <script>
-        var map_texture = new THREE.TextureLoader().load(map_crop)
-        var satellite_texture = new THREE.TextureLoader().load(satellite_crop)
+    window.removeEventListener("click", endRoutePlacement)
+}
+</script>
+<script>
+    var map_texture = new THREE.TextureLoader().load(map_crop)
+    var satellite_texture = new THREE.TextureLoader().load(satellite_crop)
 
-        var canvas = document.getElementById("mapDisplay")
-        var renderer = new THREE.WebGLRenderer({
-            antialias: true,
-            canvas: canvas
-        })
-        renderer.setSize(window.innerWidth, window.innerHeight)
+    var canvas = document.getElementById("mapDisplay")
+    var renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        canvas: canvas
+    })
+    renderer.setSize(window.innerWidth, window.innerHeight)
 
-        var scene = new THREE.Scene()
-        scene.background = new THREE.Color(0xffffff)
+    var scene = new THREE.Scene()
+    scene.background = new THREE.Color(0xffffff)
 
 
 
-        var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000)
-        camera.position.set(0, 0, 100)
-        scene.add(camera)
+    var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000)
+    camera.position.set(0, 0, 100)
+    scene.add(camera)
 
-        var raycaster = new THREE.Raycaster();
-        var mouse = new THREE.Vector2();
+    var raycaster = new THREE.Raycaster();
+    var mouse = new THREE.Vector2();
 
-        var controls = new THREE.OrbitControls(camera, canvas)
-        controls.enableDamping = true
-        controls.dampingFactor = 0.07
-        controls.enableRotate = false
-        controls.screenSpacePanning = true
-        controls.panSpeed = 0.07
-        controls.maxDistance = 110
-        controls.minDistance = 50
+    var controls = new THREE.OrbitControls(camera, canvas)
+    controls.enableDamping = true
+    controls.dampingFactor = 0.07
+    controls.enableRotate = false
+    controls.screenSpacePanning = true
+    controls.panSpeed = 0.07
+    controls.maxDistance = 110
+    controls.minDistance = 50
 
-        var plane1_geom = new THREE.PlaneGeometry(100, 60, 1, 1)
-        var plane1_mat = new THREE.MeshBasicMaterial({
-            map: satellite_texture,
-            side: THREE.DoubleSide
-        })
-        var plane1 = new THREE.Mesh(plane1_geom, plane1_mat)
-        scene.add(plane1)
-        plane1.visible = true
+    var plane1_geom = new THREE.PlaneGeometry(100, 60, 1, 1)
+    var plane1_mat = new THREE.MeshBasicMaterial({
+        map: satellite_texture,
+        side: THREE.DoubleSide
+    })
+    var plane1 = new THREE.Mesh(plane1_geom, plane1_mat)
+    scene.add(plane1)
+    plane1.visible = true
 
-        var plane2_geom = new THREE.PlaneGeometry(100, 60, 1, 1)
-        var plane2_mat = new THREE.MeshBasicMaterial({
-            map: map_texture,
-            side: THREE.DoubleSide
-        })
-        var plane2 = new THREE.Mesh(plane2_geom, plane2_mat)
-        scene.add(plane2)
-        plane2.visible = false
+    var plane2_geom = new THREE.PlaneGeometry(100, 60, 1, 1)
+    var plane2_mat = new THREE.MeshBasicMaterial({
+        map: map_texture,
+        side: THREE.DoubleSide
+    })
+    var plane2 = new THREE.Mesh(plane2_geom, plane2_mat)
+    scene.add(plane2)
+    plane2.visible = false
 
 
         //factory methods use these globals
