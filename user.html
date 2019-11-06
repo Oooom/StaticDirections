@@ -39,6 +39,13 @@
 			margin-left: 5px;
 			border: none;
 		}
+
+		select{
+			min-width: 110px;
+			float: right;
+			border: none;
+			margin-left: 5px;
+		}
 	</style>
 
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
@@ -51,10 +58,12 @@
 
 		<form name="preferences">
 	<div id="menu">
-		<label>From</label> <input type="text" disabled id="from" placeholder="   click on a red icon" />
+		<label>From</label> 
+		<select id = "from"></select> 
 		<br>
 
-		<label>To</label> <input type="text" disabled id="to" placeholder="   click on a red icon" />
+		<label>To</label> 
+		<select id="to"></select>
 		<br>
 			<label>Preferences</label>
 			<br>
@@ -438,7 +447,8 @@ function minDistance(nodes, factor) {
         	if ('files' in input && input.files.length > 0) {
         		placeFileContent(
         			document.getElementById('content-target'),
-        			input.files[0])
+        			input.files[0]
+				)
         	}
         }
 
@@ -449,6 +459,16 @@ function minDistance(nodes, factor) {
 
         		renderGraph()
         		createMatrixFromAdjacencyList()
+
+				for(var i = 0; i < 2; i++){					
+					for(var node of graph.nodes){
+						var opt = document.createElement("option")
+						
+						opt.innerText = node.label
+						opt.value = node.label
+						routeInputs[i].appendChild(opt)
+					}
+				}
 
         	}).catch(error => console.log(error))
         }
