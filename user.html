@@ -84,6 +84,13 @@
 
 </canvas>
 
+<div style="position: fixed; right: 0; bottom: 0;">
+	<button type="button" class="btn btn-info" data-toggle="collapse" data-target="#demo">Show Cost:</button>
+	<div id="demo" class="collapse in" style="background-color: white;">
+		All The Weights of the path appear here.
+	</div>
+</div>
+
 <script src="map_data_urls.js"></script>
 <script src="scripts/three.min.js"></script>
 <script src="scripts/OrbitControls.js"></script>
@@ -112,6 +119,10 @@
 
 	function renderGraph() {
 		var label_coords_map = {}
+		var color_dict = {
+			"roadway": 0x00FF00,
+			"metro": 0xFFA500
+		}
 
 		for (var i = 0; i < graph.nodes.length; i++) {
 			var red_circle = new THREE.Mesh(circle_geom, circle_mat)
@@ -131,10 +142,12 @@
 				var line_mesh = drawLine(
 					new THREE.Vector3(graph.edges[i].vertices[j - 1].x, graph.edges[i].vertices[j - 1].y, 0.1),
 					new THREE.Vector3(graph.edges[i].vertices[j].x, graph.edges[i].vertices[j].y, 0.1)
-					)
+				)
 
 				line_mesh.userData.start = graph.edges[i].start
 				line_mesh.userData.end = graph.edges[i].end
+				line_mesh.userData.mode_o_transport = graph.edges[i].mode
+				line_mesh.material.color.setHex( color_dict[graph.edges[i].mode] )
 			}
 		}
 	}
@@ -213,6 +226,19 @@
 		routeInputs[current_selected].style.border = "1px solid blue"
 	}
 
+	function getEdge(start, end){
+		for(var edge of graph.edges){
+			if(
+				(edge.start == start && edge.end == end) ||
+				(edge.start == end && edge.end == start)
+			){
+				return edge
+			}
+		}
+		
+		return null
+	}
+
 	function getLabelIndex(label) {
 		for (var i = 0; i < graph.nodes.length; i++) {
 			if (label == graph.nodes[i].label) {
@@ -237,15 +263,21 @@
 	}
 
 	function colorEdge(list, color){
+		var color_dict = {
+			"roadway": 0x00FF00,
+			"metro": 0xFFA500
+		}
+
 		for(var i = 1; i < list.length; i++){
 			var lines = getRoutesMesh(list[i-1], list[i])
 
 			for(var line of lines){
-				line.material.color.setHex(color)
-
-                    if(color == 0x00FF00){  //the normal color
+				
+                    if(color == 0x00FF00){  //the normal color					
+						line.material.color.setHex(color_dict[line.userData.mode_o_transport])
                     	line.position.z = 0.1
                     }else{ //highlighted
+						line.material.color.setHex(color)
                     	line.position.z = 0.12
                     }
                 }
@@ -288,6 +320,28 @@
 		}
 
 		renderPath(to_render_list)
+
+		var html = ""
+
+		var t_d = 0
+		var t_e = 0
+		var t_t = 0
+
+		for(var i = 1; i < to_render_list.length; i++){
+			var edge = getEdge(to_render_list[i], to_render_list[i-1])
+
+			var line = "(" + edge.mode + ")" + "  " + to_render_list[i-1] + " -> " + to_render_list[i] + " : " + edge.distance + " - " + edge.expense + " - " + edge.time + "<br>"
+
+			html += line
+
+			t_d += edge.distance
+			t_e += edge.expense
+			t_t += edge.time
+		}
+
+		html += "<b>Total Journey Cost:</b> " + t_d + "(m) " + t_e + "(Rs) " + t_t + "(min) "
+
+		document.getElementById("demo").innerHTML = html
 	}
 
 	function dijsktra(graph, source, destination, factor) {
@@ -405,10 +459,9 @@ function minDistance(nodes, factor) {
         	requestAnimationFrame(animate)
 
         	controls.update()
-
-            // update the picking ray with the camera and mouse position
+            
             raycaster.setFromCamera(mouse, camera);
-            // calculate objects intersecting the picking ray
+            
             var intersects = raycaster.intersectObjects(scene.children);
             if (intersects.length == 0) {
             	canvas.title = ""
